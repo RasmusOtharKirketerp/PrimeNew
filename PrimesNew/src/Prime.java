@@ -4,18 +4,23 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class Prime {
 	// Private
 	private boolean traceTime = false;
 	private boolean traceDisplay = false;
+	private boolean traceProgress = true;
+	private long traceProgressDivisor = 100;
+	private int traceProcessListPrimesSamples = 100;
+	private int traceProcessListPrimesSamplesCount = 0;
+
+	private ArrayList<Long> foundPrimesInRAM = new ArrayList<>();
+	private long MaxPrimeInRAM = 0;
 
 	private Long nextPrime = 2L;
 
 	private long findMaxPrime;
-
-	long totalMemory = 0;
-	long freeMemory = 0;
 
 	// Getter and setters....
 	public boolean isTraceTime() {
@@ -50,11 +55,30 @@ public class Prime {
 		setTraceTime(timetrace);
 		setTraceDisplay(displaytrace);
 		readPrimeFile();
-		boolean isPrimeBoolean=false;
+		boolean isPrimeBoolean = false;
 		for (long i = nextPrime; i <= getFindMaxPrime(); i++) {
-			isPrimeBoolean = isPrime2(i);
+			if (i % 2 == 0)
+				isPrimeBoolean = false;
+			else
+				isPrimeBoolean = isPrime2(i);
 			logThis(i, isPrimeBoolean);
 		}
+	}
+
+	public boolean addNewPrimeToRAM(long newP) {
+		boolean retval = false;
+
+		long freeRAM = Runtime.getRuntime().freeMemory();
+
+		if (freeRAM > 100_000_000L) {
+			foundPrimesInRAM.add(newP);
+			if (newP > MaxPrimeInRAM)
+				MaxPrimeInRAM = newP;
+			System.out.println(newP + " loaded in RAM. MaxPrime is : " + MaxPrimeInRAM);
+			retval = true;
+		}
+
+		return retval;
 	}
 
 	private void readPrimeFile() {
@@ -63,7 +87,7 @@ public class Prime {
 		String[] parts;
 		String primeInString;
 
-		//System.out.println("ReadPrimeFile...");
+		// System.out.println("ReadPrimeFile...");
 
 		try {
 			FileReader fstream = new FileReader("primes.txt");
@@ -71,14 +95,18 @@ public class Prime {
 			while ((lineRead = in.readLine()) != null) {
 				parts = lineRead.split(";");
 				primeInString = parts[0]; // 004
+
 				nextPrime = Long.valueOf(primeInString).longValue();
-				//System.out.println("NextPrime in readPrime :" + nextPrime);
+				addNewPrimeToRAM(nextPrime);
+
+				// System.out.println("NextPrime in readPrime :" + nextPrime);
 
 			}
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		System.out.println("NextPrime in readPrime :" + nextPrime);
 
 	}
 
@@ -94,30 +122,48 @@ public class Prime {
 
 		boolean stop = false;
 
-		//System.out.println("ReturnNoPrimeInArchive...");
+		// System.out.println("ReturnNoPrimeInArchive...");
+		if (search < foundPrimesInRAM.size()) {
+			// System.out.println("Found in RAM!");
+			retval = foundPrimesInRAM.get((int) search);
+		} else {
 
-		try {
-			FileReader fstream = new FileReader("primes.txt");
-			in = new BufferedReader(fstream);
-			while ((lineRead = in.readLine()) != null && !stop) {
-				parts = lineRead.split(";");
-				primeNo = parts[1];
-				primeNoLong = Long.valueOf(primeNo).longValue();
-				if (primeNoLong > -1) 
-					hit++;
-				if (search == hit) {
-					retval = primeNoLong;
-					stop = true;
-					//System.out.println("Returning prime no : " + primeNo);
+			try {
+				FileReader fstream = new FileReader("primes.txt");
+				in = new BufferedReader(fstream);
+				while ((lineRead = in.readLine()) != null && !stop) {
+					parts = lineRead.split(";");
+					primeNo = parts[1];
+					primeNoLong = Long.valueOf(primeNo).longValue();
+					if (primeNoLong > -1)
+						hit++;
+					if (search == hit) {
+						retval = primeNoLong;
+						stop = true;
+						// System.out.println("Returning prime no : " +
+						// primeNo);
+					}
 				}
-			}
 
-		} catch (Exception e) {
-			e.printStackTrace();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 		return retval;
 
+	}
+
+	private boolean isPrimeFoundInRAM(long search) {
+		boolean retval = false;
+		if (search < MaxPrimeInRAM) {
+			for (int i = 0; i < MaxPrimeInRAM; i++) {
+				if (foundPrimesInRAM.get(i) == search)
+					System.out.println("Found in RAM");
+				retval = true;
+			}
+		}
+		return retval;
 	}
 
 	private long isPrimeInArchive(long l) {
@@ -131,26 +177,32 @@ public class Prime {
 
 		long retval = 0;
 
-		//System.out.println("Searching for primes in archive:" + l);
-		try {
-			FileReader fstream = new FileReader("primes.txt");
-			in = new BufferedReader(fstream);
-			while ((lineRead = in.readLine()) != null) {
-				parts = lineRead.split(";");
-				idxInString = parts[0];
-				primeInString = parts[1];
-				pl = Long.valueOf(primeInString).longValue();
-				il = Long.valueOf(idxInString).longValue();
-				if (il == l) {
-					System.out.println("found: " + primeInString);
-					retval = pl;
-				} else
-					System.out.println("On idx: " + idxInString + " was : " + pl);
+		if (isPrimeFoundInRAM(l)) {
+			retval = l;
 
+		} else {
+
+			// System.out.println("Searching for primes in archive:" + l);
+			try {
+				FileReader fstream = new FileReader("primes.txt");
+				in = new BufferedReader(fstream);
+				while ((lineRead = in.readLine()) != null) {
+					parts = lineRead.split(";");
+					idxInString = parts[0];
+					primeInString = parts[1];
+					pl = Long.valueOf(primeInString).longValue();
+					il = Long.valueOf(idxInString).longValue();
+					if (il == l) {
+						System.out.println("found: " + primeInString);
+						retval = pl;
+					} else
+						System.out.println("On idx: " + idxInString + " was : " + pl);
+
+				}
+
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
 
 		System.out.println("isPrimeInArchive : " + retval);
@@ -218,11 +270,20 @@ public class Prime {
 			out = new BufferedWriter(fstream);
 			if (!thisIsPrime)
 				str = solveForThisPrime + ";" + -1 + ";" + System.lineSeparator();
-			else
+			else {
+				traceProcessListPrimesSamplesCount++;
 				str = solveForThisPrime + ";" + solveForThisPrime + ";" + System.lineSeparator();
-			System.out.println(str);
+				if (traceProgress && (traceProcessListPrimesSamplesCount % traceProcessListPrimesSamples==0)) {
+					System.out.println("Prime found : " + solveForThisPrime);
+					double work = (double) ((solveForThisPrime * ((double) traceProgressDivisor)) / getFindMaxPrime());
+					System.out.format("Fuldført  :  %10.6f ", work);
+					System.out.println(" %");
+				}
+
+			}
+
 			out.write(str);
-			out.flush();
+			// out.flush();
 			out.close();
 
 		} catch (Exception e) {

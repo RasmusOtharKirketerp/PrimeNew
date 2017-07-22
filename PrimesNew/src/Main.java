@@ -5,7 +5,7 @@ public class Main  {
 
 	public static void main(String[] args) throws InterruptedException, IOException {
 		
-		long findPrimes = 223764L;
+		long findPrimes = 99_553_366_882L;
 
 		Prime myPrime = new Prime(findPrimes);
 
