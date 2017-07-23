@@ -11,9 +11,16 @@ public class Prime {
 	private boolean traceTime = false;
 	private boolean traceDisplay = false;
 	private boolean traceProgress = true;
-	private long traceProgressDivisor = 100;
-	private int traceProcessListPrimesSamples = 100;
+	private static final long traceProgressDivisor = 100;
+	private static final int traceProcessListPrimesSamples = 100;
 	private int traceProcessListPrimesSamplesCount = 0;
+	private static final int commitRestartFrekvens = 1;
+	private int commitRestartFrekvensCounter = 0;
+	private static final boolean DEBUG = false;
+	
+	private static final String DEBUG_FILE = "debug_primes.csv";
+	private static String PRIMES_FILE = "primes.csv";
+	
 
 	private ArrayList<Long> foundPrimesInRAM = new ArrayList<>();
 	private long MaxPrimeInRAM = 0;
@@ -52,6 +59,8 @@ public class Prime {
 	}
 
 	public void doPrimes(boolean timetrace, boolean displaytrace) throws InterruptedException, IOException {
+		if (DEBUG)
+			PRIMES_FILE = DEBUG_FILE;
 		setTraceTime(timetrace);
 		setTraceDisplay(displaytrace);
 		readPrimeFile();
@@ -74,7 +83,7 @@ public class Prime {
 			foundPrimesInRAM.add(newP);
 			if (newP > MaxPrimeInRAM)
 				MaxPrimeInRAM = newP;
-			System.out.println(newP + " loaded in RAM. MaxPrime is : " + MaxPrimeInRAM);
+			//System.out.println(newP + " loaded in RAM. MaxPrime is : " + MaxPrimeInRAM);
 			retval = true;
 		}
 
@@ -82,31 +91,45 @@ public class Prime {
 	}
 
 	private void readPrimeFile() {
+		//private
 		BufferedReader in;
 		String lineRead = "";
 		String[] parts;
 		String primeInString;
 
-		// System.out.println("ReadPrimeFile...");
+		System.out.println("ReadPrimeFile...");
+		
+		long lastValue =0;
 
 		try {
-			FileReader fstream = new FileReader("primes.txt");
+			FileReader fstream = new FileReader(PRIMES_FILE);
 			in = new BufferedReader(fstream);
 			while ((lineRead = in.readLine()) != null) {
 				parts = lineRead.split(";");
 				primeInString = parts[0]; // 004
-
+				//validate if there are missing numbers in the file
+				// by chekking last recordno - this one...
+				lastValue = Long.valueOf(primeInString).longValue();
+                if (lastValue - nextPrime  > 1)
+                {
+                	System.out.println("Error found at pos : " + nextPrime + " and " + lastValue);
+                	boolean data_in_file_ok = false;
+                	System.exit(1000);
+                }
 				nextPrime = Long.valueOf(primeInString).longValue();
+				
+				
+				
 				addNewPrimeToRAM(nextPrime);
 
-				// System.out.println("NextPrime in readPrime :" + nextPrime);
+				//System.out.println("NextPrime in readPrime :" + nextPrime);
 
 			}
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		System.out.println("NextPrime in readPrime :" + nextPrime);
+		System.out.println("Done! NextPrime is = " + nextPrime + " lets start...");
 
 	}
 
@@ -129,7 +152,7 @@ public class Prime {
 		} else {
 
 			try {
-				FileReader fstream = new FileReader("primes.txt");
+				FileReader fstream = new FileReader(PRIMES_FILE);
 				in = new BufferedReader(fstream);
 				while ((lineRead = in.readLine()) != null && !stop) {
 					parts = lineRead.split(";");
@@ -184,7 +207,7 @@ public class Prime {
 
 			// System.out.println("Searching for primes in archive:" + l);
 			try {
-				FileReader fstream = new FileReader("primes.txt");
+				FileReader fstream = new FileReader(PRIMES_FILE);
 				in = new BufferedReader(fstream);
 				while ((lineRead = in.readLine()) != null) {
 					parts = lineRead.split(";");
@@ -266,25 +289,30 @@ public class Prime {
 		BufferedWriter out;
 		String str = "";
 		try {
-			FileWriter fstream = new FileWriter("primes.txt", true);
+			FileWriter fstream = new FileWriter(PRIMES_FILE, true);
 			out = new BufferedWriter(fstream);
 			if (!thisIsPrime)
 				str = solveForThisPrime + ";" + -1 + ";" + System.lineSeparator();
 			else {
 				traceProcessListPrimesSamplesCount++;
 				str = solveForThisPrime + ";" + solveForThisPrime + ";" + System.lineSeparator();
-				if (traceProgress && (traceProcessListPrimesSamplesCount % traceProcessListPrimesSamples==0)) {
-					System.out.println("Prime found : " + solveForThisPrime);
+				if (traceProgress && (traceProcessListPrimesSamplesCount % traceProcessListPrimesSamples == 0)) {
+					traceProcessListPrimesSamplesCount = 0;
+					System.out.println("Prime found : " + solveForThisPrime + ". Mål : " + findMaxPrime);
 					double work = (double) ((solveForThisPrime * ((double) traceProgressDivisor)) / getFindMaxPrime());
 					System.out.format("Fuldført  :  %10.6f ", work);
 					System.out.println(" %");
 				}
 
 			}
-
+			commitRestartFrekvensCounter++;
 			out.write(str);
-			// out.flush();
-			out.close();
+			out.flush();
+			if ( commitRestartFrekvensCounter % commitRestartFrekvens == 0) {
+				commitRestartFrekvensCounter = 0;
+				
+				out.close();
+			}
 
 		} catch (Exception e) {
 			e.printStackTrace();
