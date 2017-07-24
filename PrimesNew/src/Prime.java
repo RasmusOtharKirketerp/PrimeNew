@@ -5,7 +5,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -22,6 +21,8 @@ public class Prime {
 
 	private static final int traceProcessRAMSamples = 100000;
 	private int traceProcessRAMCount = 1;
+	
+	private StopWatch sw = new StopWatch();
 
 	private static final boolean DEBUG = false;
 
@@ -101,8 +102,7 @@ public class Prime {
 		System.out.println(output);
 	}
 
-	public String PrintTimeStamp() {
-		LocalDateTime date = LocalDateTime.now();
+	public String PrintTimeStamp(LocalDateTime date) {
 		DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 		String text = date.format(formatter);
 		return text;
@@ -111,6 +111,7 @@ public class Prime {
 	public boolean addNewPrimeToRAM(long newP) {
 		boolean retval = false;
 		long freeRAM = Runtime.getRuntime().freeMemory();
+		 
 		if (!do_not_use_ram) {
 
 			if (freeRAM > 100_000L) {
@@ -125,13 +126,19 @@ public class Prime {
 
 		traceProcessRAMCount++;
 		if (traceProcessRAMCount % traceProcessRAMSamples == 0) {
+			
 			// System.out.println(newP + " loaded in RAM. MaxPrime is : " +
 			// MaxPrimeInRAM + ". FreeRAM : " + freeRAM);
 			customFormat("Prime : ###,###,###,###,###", newP);
 			customFormat("RAM   : ###,###,###,###,### MB", freeRAM / 1000 / 1000);
-			System.out.println("Time : " + PrintTimeStamp());
+			System.out.println("Using RAM : " + !do_not_use_ram);
+			System.out.println("Time : " + PrintTimeStamp(LocalDateTime.now()));
+			sw.end();
+			System.out.println("Diff-time : " + sw.getDiffStr());
+			sw.start();
 			System.out.println();
 			traceProcessListPrimesSamplesCount = 1;
+			
 		}
 		return retval;
 	}
@@ -209,6 +216,55 @@ public class Prime {
 		return retval;
 
 	}
+	
+	private long getNoPrimeInArchiveOptimized(long search) {
+		BufferedReader in;
+		String lineRead = "";
+		String[] parts;
+		String primeNo;
+
+		long primeNoLong;
+		long retval = -1L;
+		long hit = 0;
+
+		boolean stop = false;
+
+		// System.out.println("ReturnNoPrimeInArchive...");
+		if (search < foundPrimesInRAM.size()) {
+			// System.out.println("Found in RAM!");
+			retval = foundPrimesInRAM.get((int) search);
+		} else {
+
+			try {
+				FileReader fstream = new FileReader(PRIMES_FILE);
+				in = new BufferedReader(fstream);
+				while ((lineRead = in.readLine()) != null && !stop) {
+					parts = lineRead.split(";");
+					primeNo = parts[0];
+					primeNoLong = Long.valueOf(primeNo).longValue();
+					if (primeNoLong > -1)
+						hit++;
+					if (search == hit) {
+						retval = primeNoLong;
+						stop = true;
+						// System.out.println("Returning prime no : " +
+						// primeNo);
+					}
+				}
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+
+		return retval;
+
+	}
+	
+	
+	
+	
+	
 
 	private boolean isPrimeFoundInRAM(long search) {
 		boolean retval = false;
