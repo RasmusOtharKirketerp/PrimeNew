@@ -4,6 +4,10 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DecimalFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
 public class Prime {
@@ -11,9 +15,14 @@ public class Prime {
 	private boolean traceTime = false;
 	private boolean traceDisplay = false;
 	private boolean traceProgress = true;
+	private boolean do_not_use_ram = false;
 	private static final long traceProgressDivisor = 100;
-	private static final int traceProcessListPrimesSamples = 100;
-	private int traceProcessListPrimesSamplesCount = 0;
+	private static final int traceProcessListPrimesSamples = 100000;
+	private int traceProcessListPrimesSamplesCount = 1;
+
+	private static final int traceProcessRAMSamples = 100000;
+	private int traceProcessRAMCount = 1;
+
 	private static final boolean DEBUG = false;
 
 	private static final String DEBUG_FILE = "debug_primes.csv";
@@ -25,6 +34,9 @@ public class Prime {
 	private Long nextPrime = 2L;
 
 	private long findMaxPrime;
+
+	public BufferedWriter out;
+	FileWriter fstream = null;
 
 	// Getter and setters....
 	public boolean isTraceTime() {
@@ -50,9 +62,16 @@ public class Prime {
 	public void setFindMaxPrime(long findMaxPrime) {
 		this.findMaxPrime = findMaxPrime;
 	}
-	
-	private void makeFileReady(){
-		
+
+	private void makeFileReady() {
+
+		try {
+			fstream = new FileWriter(PRIMES_FILE, true);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			// e.printStackTrace();
+		}
+		out = new BufferedWriter(fstream);
 	}
 
 	public Prime(long maxTry) {
@@ -76,22 +95,44 @@ public class Prime {
 		}
 	}
 
+	public void customFormat(String pattern, double value) {
+		DecimalFormat myFormatter = new DecimalFormat(pattern);
+		String output = myFormatter.format(value);
+		System.out.println(output);
+	}
+
+	public String PrintTimeStamp() {
+		LocalDateTime date = LocalDateTime.now();
+		DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+		String text = date.format(formatter);
+		return text;
+	}
+
 	public boolean addNewPrimeToRAM(long newP) {
 		boolean retval = false;
-
 		long freeRAM = Runtime.getRuntime().freeMemory();
-		// System.out.println("Free RAM to JVM : " + freeRAM);
+		if (!do_not_use_ram) {
 
-		if (freeRAM > 100_000_000L) {
-			foundPrimesInRAM.add(newP);
-			if (newP > MaxPrimeInRAM)
-				MaxPrimeInRAM = newP;
+			if (freeRAM > 100_000L) {
+				foundPrimesInRAM.add(newP);
+				if (newP > MaxPrimeInRAM)
+					MaxPrimeInRAM = newP;
+				retval = true;
+			} else {
+				do_not_use_ram = true;
+			}
+		}
+
+		traceProcessRAMCount++;
+		if (traceProcessRAMCount % traceProcessRAMSamples == 0) {
 			// System.out.println(newP + " loaded in RAM. MaxPrime is : " +
-			// MaxPrimeInRAM);
-			retval = true;
-		} else
-			System.out.println("Out of memory!");
-
+			// MaxPrimeInRAM + ". FreeRAM : " + freeRAM);
+			customFormat("Prime : ###,###,###,###,###", newP);
+			customFormat("RAM   : ###,###,###,###,### MB", freeRAM / 1000 / 1000);
+			System.out.println("Time : " + PrintTimeStamp());
+			System.out.println();
+			traceProcessListPrimesSamplesCount = 1;
+		}
 		return retval;
 	}
 
@@ -278,34 +319,22 @@ public class Prime {
 	}
 
 	private void logThis(long solveForThisPrime, boolean thisIsPrime) throws IOException {
-		BufferedWriter out;
 		String str = "";
 		if (thisIsPrime) {
-			try {
-				FileWriter fstream = new FileWriter(PRIMES_FILE, true);
-				out = new BufferedWriter(fstream);
-				traceProcessListPrimesSamplesCount++;
-				str = solveForThisPrime + ";" + System.lineSeparator();
-				if (traceProgress && (traceProcessListPrimesSamplesCount % traceProcessListPrimesSamples == 0)) {
-					traceProcessListPrimesSamplesCount = 0;
-					System.out.println("Prime found : " + solveForThisPrime + ". Mål : " + findMaxPrime);
-					double work = (double) ((solveForThisPrime * ((double) traceProgressDivisor)) / getFindMaxPrime());
-					System.out.format("Fuldført  :  %10.6f ", work);
-					System.out.println(" %");
-
-				}
-				addNewPrimeToRAM(solveForThisPrime);
-				out.write(str);
-				out.flush();
-				out.close();
+			traceProcessListPrimesSamplesCount++;
+			str = solveForThisPrime + ";" + System.lineSeparator();
+			if (traceProgress && (traceProcessListPrimesSamplesCount % traceProcessListPrimesSamples == 0)) {
+				traceProcessListPrimesSamplesCount = 0;
+				System.out.println("Prime found : " + solveForThisPrime + ". Mål : " + findMaxPrime);
+				double work = (double) ((solveForThisPrime * ((double) traceProgressDivisor)) / getFindMaxPrime());
+				System.out.format("Fuldført  :  %10.6f ", work);
+				System.out.println(" %");
 			}
-
-			catch (
-
-			Exception e) {
-				e.printStackTrace();
-			}
+			addNewPrimeToRAM(solveForThisPrime);
+			out.write(str);
+			out.flush();
 
 		}
+
 	}
 }
