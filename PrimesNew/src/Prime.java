@@ -1,4 +1,5 @@
 
+import java.awt.Graphics2D;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
@@ -13,23 +14,26 @@ public class Prime {
 	// Private
 	private boolean traceTime = false;
 	private boolean traceDisplay = false;
-	private boolean traceProgress = true;
 	private boolean do_not_use_ram = false;
+	private boolean file_loaded = false;
 	private static final long traceProgressDivisor = 100;
-	private static final int traceProcessListPrimesSamples = 100000;
+	private static final int traceProcessListPrimesSamples = 10000000;
 	private int traceProcessListPrimesSamplesCount = 1;
 
-	private static final int traceProcessRAMSamples = 100000;
-	private int traceProcessRAMCount = 1;
-	
 	private StopWatch sw = new StopWatch();
+	private StopWatch swCommit = new StopWatch();
 
 	private static final boolean DEBUG = false;
 
 	private static final String DEBUG_FILE = "debug_primes.csv";
 	private static String PRIMES_FILE = "primes.csv";
 
-	private ArrayList<Long> foundPrimesInRAM = new ArrayList<>();
+	private ArrayList<Long> foundPrimesInRAM = new ArrayList<>(1_000_000);
+
+	public int getPrimes(int index) {
+		return foundPrimesInRAM.get(index).intValue();
+	}
+
 	private long MaxPrimeInRAM = 0;
 
 	private Long nextPrime = 2L;
@@ -81,22 +85,40 @@ public class Prime {
 	}
 
 	public void doPrimes(boolean timetrace, boolean displaytrace) throws InterruptedException, IOException {
+		long freeRAM = Runtime.getRuntime().freeMemory();
 		if (DEBUG)
 			PRIMES_FILE = DEBUG_FILE;
 		setTraceTime(timetrace);
 		setTraceDisplay(displaytrace);
 		readPrimeFile();
 		boolean isPrimeBoolean = false;
+
 		for (long i = nextPrime; i <= getFindMaxPrime(); i++) {
 			if (i % 2 == 0)
 				isPrimeBoolean = false;
 			else
 				isPrimeBoolean = isPrime2(i);
 			logThis(i, isPrimeBoolean);
+			if (file_loaded) {
+				doCommit();
+			}
+
+			if (i % traceProcessListPrimesSamples == 0) {
+				customFormat("Prime : ###,###,###,###,###", i);
+				customFormat("RAM   : ###,###,###,###,### MB", freeRAM / 1000 / 1000);
+				System.out.println("Using RAM : " + !do_not_use_ram);
+				System.out.println("Time : " + PrintTimeStamp(LocalDateTime.now()));
+				sw.end();
+				System.out.println("Diff-time : " + sw.getDiffStr());
+				sw.start();
+				System.out.println();
+				traceProcessListPrimesSamplesCount = 1;
+			}
+
 		}
 	}
 
-	public void customFormat(String pattern, double value) {
+	public void customFormat(String pattern, long value) {
 		DecimalFormat myFormatter = new DecimalFormat(pattern);
 		String output = myFormatter.format(value);
 		System.out.println(output);
@@ -110,45 +132,26 @@ public class Prime {
 
 	public boolean addNewPrimeToRAM(long newP) {
 		boolean retval = false;
-		long freeRAM = Runtime.getRuntime().freeMemory();
-		 
-		if (!do_not_use_ram) {
+		;
+		if (foundPrimesInRAM.size() < 999_999L) {
+			foundPrimesInRAM.add(newP);
+			if (newP > MaxPrimeInRAM)
+				MaxPrimeInRAM = newP;
+			retval = true;
+		} else
+			do_not_use_ram = true;
 
-			if (freeRAM > 100_000L) {
-				foundPrimesInRAM.add(newP);
-				if (newP > MaxPrimeInRAM)
-					MaxPrimeInRAM = newP;
-				retval = true;
-			} else {
-				do_not_use_ram = true;
-			}
-		}
-
-		traceProcessRAMCount++;
-		if (traceProcessRAMCount % traceProcessRAMSamples == 0) {
-			
-			// System.out.println(newP + " loaded in RAM. MaxPrime is : " +
-			// MaxPrimeInRAM + ". FreeRAM : " + freeRAM);
-			customFormat("Prime : ###,###,###,###,###", newP);
-			customFormat("RAM   : ###,###,###,###,### MB", freeRAM / 1000 / 1000);
-			System.out.println("Using RAM : " + !do_not_use_ram);
-			System.out.println("Time : " + PrintTimeStamp(LocalDateTime.now()));
-			sw.end();
-			System.out.println("Diff-time : " + sw.getDiffStr());
-			sw.start();
-			System.out.println();
-			traceProcessListPrimesSamplesCount = 1;
-			
-		}
 		return retval;
+
 	}
 
-	private void readPrimeFile() {
+	public void readPrimeFile() {
 		// private
 		BufferedReader in;
 		String lineRead = "";
 		String[] parts;
 		String primeInString;
+		long i = 0;
 
 		System.out.println("ReadPrimeFile...");
 
@@ -156,19 +159,23 @@ public class Prime {
 			FileReader fstream = new FileReader(PRIMES_FILE);
 			in = new BufferedReader(fstream);
 			while ((lineRead = in.readLine()) != null) {
+				i++;
 				parts = lineRead.split(";");
 				primeInString = parts[0]; // 004
 				nextPrime = Long.valueOf(primeInString).longValue();
 
 				addNewPrimeToRAM(nextPrime);
 
-				// System.out.println("NextPrime in readPrime :" + nextPrime);
+				if (i % 100000 == 0)
+					System.out.println("NextPrime in readPrime :" + nextPrime);
 
 			}
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		file_loaded = true;
+		swCommit.start();
 		System.out.println("Done! NextPrime is = " + nextPrime + " lets start...");
 
 	}
@@ -216,55 +223,6 @@ public class Prime {
 		return retval;
 
 	}
-	
-	private long getNoPrimeInArchiveOptimized(long search) {
-		BufferedReader in;
-		String lineRead = "";
-		String[] parts;
-		String primeNo;
-
-		long primeNoLong;
-		long retval = -1L;
-		long hit = 0;
-
-		boolean stop = false;
-
-		// System.out.println("ReturnNoPrimeInArchive...");
-		if (search < foundPrimesInRAM.size()) {
-			// System.out.println("Found in RAM!");
-			retval = foundPrimesInRAM.get((int) search);
-		} else {
-
-			try {
-				FileReader fstream = new FileReader(PRIMES_FILE);
-				in = new BufferedReader(fstream);
-				while ((lineRead = in.readLine()) != null && !stop) {
-					parts = lineRead.split(";");
-					primeNo = parts[0];
-					primeNoLong = Long.valueOf(primeNo).longValue();
-					if (primeNoLong > -1)
-						hit++;
-					if (search == hit) {
-						retval = primeNoLong;
-						stop = true;
-						// System.out.println("Returning prime no : " +
-						// primeNo);
-					}
-				}
-
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-
-		return retval;
-
-	}
-	
-	
-	
-	
-	
 
 	private boolean isPrimeFoundInRAM(long search) {
 		boolean retval = false;
@@ -275,6 +233,7 @@ public class Prime {
 				retval = true;
 			}
 		}
+
 		return retval;
 	}
 
@@ -351,6 +310,8 @@ public class Prime {
 		long res = Math.floorMod(solveForThisPrime, getPrimeNoInArchiveLong);
 		if (res == 0) {
 			thisHasFactors = true;
+			if (counter > 999999)
+				System.out.println("Factor found!" + getPrimeNoInArchiveLong + " is a factor to " + solveForThisPrime);
 		}
 
 		return thisHasFactors;
@@ -359,6 +320,7 @@ public class Prime {
 	public boolean isPrime2(long solveForThisPrime) throws InterruptedException, IOException {
 		boolean thisIsPrime = false;
 		boolean thisHasFactors = false;
+
 		long cd = (int) Math.sqrt(solveForThisPrime);
 		for (int counter = 1; counter < cd; counter++) {
 			thisIsPrime = true;
@@ -374,21 +336,58 @@ public class Prime {
 		return thisIsPrime;
 	}
 
+	private void doCommit() {
+		swCommit.end();
+		if (swCommit.getMinutes() > 9) {
+			try {
+				System.out.println("Starting Commit/restart....");
+				out.close();
+				makeFileReady();
+				swCommit.start();
+				System.out.println("Commit/restart done!");
+
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
+	}
+
 	private void logThis(long solveForThisPrime, boolean thisIsPrime) throws IOException {
 		String str = "";
 		if (thisIsPrime) {
 			traceProcessListPrimesSamplesCount++;
 			str = solveForThisPrime + ";" + System.lineSeparator();
-			if (traceProgress && (traceProcessListPrimesSamplesCount % traceProcessListPrimesSamples == 0)) {
+			if ((traceProcessListPrimesSamplesCount % 50000 == 0)) {
 				traceProcessListPrimesSamplesCount = 0;
-				System.out.println("Prime found : " + solveForThisPrime + ". Mål : " + findMaxPrime);
+				customFormat("Prime found         : ###,###,###,###,###", solveForThisPrime);
+				customFormat("Find primes to this : ###,###,###,###,###", findMaxPrime);
 				double work = (double) ((solveForThisPrime * ((double) traceProgressDivisor)) / getFindMaxPrime());
 				System.out.format("Fuldført  :  %10.6f ", work);
 				System.out.println(" %");
+
 			}
+
 			addNewPrimeToRAM(solveForThisPrime);
 			out.write(str);
 			out.flush();
+		}
+
+	}
+
+	public void draw(Graphics2D g2d) {
+		if (!file_loaded)
+			readPrimeFile();
+		for (int i = 0; i < 400; i++) {
+			System.out.println("Drawing...." + i);
+			int p = foundPrimesInRAM.get(i).intValue();
+			int y = 400-(p/2);
+			int x = p;
+			int w = p;
+			int h = p;
+			//g2d.drawOval(x, y, w, h);
+			g2d.drawArc(x, y, w, h, 90, 180);
 
 		}
 
