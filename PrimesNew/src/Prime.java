@@ -10,6 +10,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
+/**
+ * @author Rasmus Othar
+ *
+ */
 public class Prime {
 	// Private
 	private boolean traceTime = false;
@@ -18,7 +22,28 @@ public class Prime {
 	private boolean file_loaded = false;
 	private static final long traceProgressDivisor = 100;
 	private static final int traceProcessListPrimesSamples = 10000000;
+	private static final int sizeOfArray = 9_999_999;
 	private int traceProcessListPrimesSamplesCount = 1;
+
+	public static boolean proc1 = false;
+
+	public static boolean isProc1() {
+		return proc1;
+	}
+
+	public static void setProc1(boolean proc1) {
+		Prime.proc1 = proc1;
+	}
+
+	public static boolean isProc2() {
+		return proc2;
+	}
+
+	public static void setProc2(boolean proc2) {
+		Prime.proc2 = proc2;
+	}
+
+	public static boolean proc2 = false;
 
 	private StopWatch sw = new StopWatch();
 	private StopWatch swCommit = new StopWatch();
@@ -28,7 +53,7 @@ public class Prime {
 	private static final String DEBUG_FILE = "debug_primes.csv";
 	private static String PRIMES_FILE = "primes.csv";
 
-	private ArrayList<Long> foundPrimesInRAM = new ArrayList<>(1_000_000);
+	private ArrayList<Long> foundPrimesInRAM = new ArrayList<>(sizeOfArray);
 
 	public int getPrimes(int index) {
 		return foundPrimesInRAM.get(index).intValue();
@@ -73,8 +98,6 @@ public class Prime {
 		try {
 			fstream = new FileWriter(PRIMES_FILE, true);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			// e.printStackTrace();
 		}
 		out = new BufferedWriter(fstream);
 	}
@@ -85,6 +108,8 @@ public class Prime {
 	}
 
 	public void doPrimes(boolean timetrace, boolean displaytrace) throws InterruptedException, IOException {
+
+		System.out.println("cpu : " + Runtime.getRuntime().availableProcessors());
 		long freeRAM = Runtime.getRuntime().freeMemory();
 		if (DEBUG)
 			PRIMES_FILE = DEBUG_FILE;
@@ -96,8 +121,22 @@ public class Prime {
 		for (long i = nextPrime; i <= getFindMaxPrime(); i++) {
 			if (i % 2 == 0)
 				isPrimeBoolean = false;
-			else
-				isPrimeBoolean = isPrime2(i);
+			else {
+				// StopWatch timeThread = new StopWatch();
+				// if (i < 1_000_000_000L)
+				// timeThread.start();
+				isPrimeBoolean = isPrime(i);
+				// timeThread.end();
+				// System.out.println("time for non-Thread : " +
+				// timeThread.getDiffStr());
+				// else
+				// timeThread.start();
+				// isPrimeBoolean = isPrimeThread(i);
+				// timeThread.end();
+				// System.out.println("time for Thread : " +
+				// timeThread.getDiffStr());
+				// Thread.sleep(3000);
+			}
 			logThis(i, isPrimeBoolean);
 			if (file_loaded) {
 				doCommit();
@@ -133,7 +172,7 @@ public class Prime {
 	public boolean addNewPrimeToRAM(long newP) {
 		boolean retval = false;
 		;
-		if (foundPrimesInRAM.size() < 999_999L) {
+		if (do_not_use_ram == false && foundPrimesInRAM.size() < sizeOfArray) {
 			foundPrimesInRAM.add(newP);
 			if (newP > MaxPrimeInRAM)
 				MaxPrimeInRAM = newP;
@@ -166,8 +205,12 @@ public class Prime {
 
 				addNewPrimeToRAM(nextPrime);
 
-				if (i % 100000 == 0)
-					System.out.println("NextPrime in readPrime :" + nextPrime);
+				if (i % 1000000 == 0) {
+					System.out.println("Do not use RAM : " + do_not_use_ram);
+					customFormat("NextPrime in readPrime : ###,###,###,###,###", nextPrime);
+					customFormat("Size of array with found primes : ###,###,###,###,###", foundPrimesInRAM.size());
+
+				}
 
 			}
 
@@ -176,7 +219,8 @@ public class Prime {
 		}
 		file_loaded = true;
 		swCommit.start();
-		System.out.println("Done! NextPrime is = " + nextPrime + " lets start...");
+		customFormat("Size of array with found primes : ###,###,###,###,###", foundPrimesInRAM.size());
+		customFormat("Done reading! Lets start! ###,###,###,###,###", nextPrime);
 
 	}
 
@@ -317,7 +361,7 @@ public class Prime {
 		return thisHasFactors;
 	}
 
-	public boolean isPrime2(long solveForThisPrime) throws InterruptedException, IOException {
+	public boolean isPrime(long solveForThisPrime) {
 		boolean thisIsPrime = false;
 		boolean thisHasFactors = false;
 
@@ -336,6 +380,75 @@ public class Prime {
 		return thisIsPrime;
 	}
 
+	public boolean isPrimeThread(long solveForThisPrime) {
+
+		boolean retval = false;
+
+		final long cd = (int) Math.sqrt(solveForThisPrime);
+		Thread odd = new Thread() {
+			public void run() {
+				boolean thisHasFactors = false;
+				boolean stopLoop = false;
+				// synchronized (arr) {
+				for (int counter = 1; counter < cd || stopLoop == false; counter += 2) {
+					// System.out.println("odd-thread. " + solveForThisPrime + "
+					// from 1. Now = " + counter);
+
+					thisHasFactors = false;
+					if (hasFactor(solveForThisPrime, counter)) {
+						stopLoop = true;
+						thisHasFactors = true;
+					}
+					// System.out.println("odd-thread. " + solveForThisPrime + "
+					// from 1 to " + cd);
+				}
+
+				// }
+
+				setProc1(!thisHasFactors);
+			}
+		};
+		Thread even = new Thread() {
+			public void run() {
+				boolean thisHasFactors = false;
+				boolean stopLoop = false;
+
+				// synchronized (arr) {
+				for (int counter = 2; counter < cd || stopLoop == false; counter += 2) {
+					// System.out.println("even-thread. " + solveForThisPrime +
+					// " from 2. Now = " + counter);
+					thisHasFactors = false;
+					if (hasFactor(solveForThisPrime, counter)) {
+						stopLoop = true;
+						thisHasFactors = true;
+					}
+					// System.out.println("even-thread. " + solveForThisPrime +
+					// " from 2 to " + cd);
+				}
+				// }
+
+				setProc2(!thisHasFactors);
+			}
+		};
+		odd.setName("solveForOdd");
+		even.setName("solveForEven");
+		odd.start();
+		even.start();
+
+		try {
+			even.join();
+			odd.join();
+
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		retval = (isProc1() && isProc2());
+		// System.out.println("isPrimeThread is finised with : " + retval);
+
+		return retval;
+	}
+
 	private void doCommit() {
 		swCommit.end();
 		if (swCommit.getMinutes() > 9) {
@@ -347,7 +460,6 @@ public class Prime {
 				System.out.println("Commit/restart done!");
 
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -366,6 +478,8 @@ public class Prime {
 				double work = (double) ((solveForThisPrime * ((double) traceProgressDivisor)) / getFindMaxPrime());
 				System.out.format("Fuldført  :  %10.6f ", work);
 				System.out.println(" %");
+				System.out.println("Do not use RAM : " + do_not_use_ram);
+				customFormat("Size of array with found primes : ###,###,###,###,###", foundPrimesInRAM.size());
 
 			}
 
@@ -382,12 +496,12 @@ public class Prime {
 		for (int i = 0; i < 400; i++) {
 			System.out.println("Drawing...." + i);
 			int p = foundPrimesInRAM.get(i).intValue();
-			int y = 400-(p/2);
+			int y = 400 - (p / 2);
 			int x = p;
 			int w = p;
 			int h = p;
-			//g2d.drawOval(x, y, w, h);
-			g2d.drawArc(x, y, w, h, 90, 180);
+			// g2d.drawOval(x, y, w, h);
+			g2d.drawArc(x, y, w, h, 0, 360);
 
 		}
 
