@@ -16,17 +16,36 @@ import java.util.ArrayList;
  */
 public class Prime {
 	// Private
+	private static final int sizeOfArray = 9_999_999;
+	private ArrayList<Long> foundPrimesInRAM = new ArrayList<>(sizeOfArray);
+	
+	
+	private long findMaxPrime;
+	
 	private boolean traceTime = false;
 	private boolean traceDisplay = false;
 	private boolean do_not_use_ram = false;
 	private boolean file_loaded = false;
+	public static boolean proc1 = false;
+	public static boolean proc2 = false;
+	private static final boolean DEBUG = false;
+	
 	private static final long traceProgressDivisor = 100;
 	private static final int traceProcessListPrimesSamples = 10000000;
-	private static final int sizeOfArray = 9_999_999;
 	private int traceProcessListPrimesSamplesCount = 1;
+	private static final String DEBUG_FILE = "debug_primes.csv";
+	private static String PRIMES_FILE = "primes.csv";
+	private long MaxPrimeInRAM = 0;
+	private Long nextPrime = 2L;
+	
+	private StopWatch sw = new StopWatch();
+	private StopWatch swCommit = new StopWatch();
+	
+	public BufferedWriter out;
+	FileWriter fstream = null;
 
-	public static boolean proc1 = false;
 
+	// Getter and setters....
 	public static boolean isProc1() {
 		return proc1;
 	}
@@ -43,32 +62,12 @@ public class Prime {
 		Prime.proc2 = proc2;
 	}
 
-	public static boolean proc2 = false;
-
-	private StopWatch sw = new StopWatch();
-	private StopWatch swCommit = new StopWatch();
-
-	private static final boolean DEBUG = false;
-
-	private static final String DEBUG_FILE = "debug_primes.csv";
-	private static String PRIMES_FILE = "primes.csv";
-
-	private ArrayList<Long> foundPrimesInRAM = new ArrayList<>(sizeOfArray);
 
 	public int getPrimes(int index) {
 		return foundPrimesInRAM.get(index).intValue();
 	}
 
-	private long MaxPrimeInRAM = 0;
 
-	private Long nextPrime = 2L;
-
-	private long findMaxPrime;
-
-	public BufferedWriter out;
-	FileWriter fstream = null;
-
-	// Getter and setters....
 	public boolean isTraceTime() {
 		return traceTime;
 	}
