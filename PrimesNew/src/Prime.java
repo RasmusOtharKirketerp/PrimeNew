@@ -18,10 +18,9 @@ public class Prime {
 	// Private
 	private static final int sizeOfArray = 9_999_999;
 	private ArrayList<Long> foundPrimesInRAM = new ArrayList<>(sizeOfArray);
-	
-	
+
 	private long findMaxPrime;
-	
+
 	private boolean traceTime = false;
 	private boolean traceDisplay = false;
 	private boolean do_not_use_ram = false;
@@ -29,21 +28,21 @@ public class Prime {
 	public static boolean proc1 = false;
 	public static boolean proc2 = false;
 	private static final boolean DEBUG = false;
-	
+
 	private static final long traceProgressDivisor = 100;
-	private static final int traceProcessListPrimesSamples = 10000000;
+	// private static final int traceProcessListPrimesSamples = 10000;
 	private int traceProcessListPrimesSamplesCount = 1;
 	private static final String DEBUG_FILE = "debug_primes.csv";
 	private static String PRIMES_FILE = "primes.csv";
 	private long MaxPrimeInRAM = 0;
 	private Long nextPrime = 2L;
-	
+
 	private StopWatch sw = new StopWatch();
 	private StopWatch swCommit = new StopWatch();
-	
+
 	public BufferedWriter out;
 	FileWriter fstream = null;
-
+	Long factorSearchWindow = 10L;
 
 	// Getter and setters....
 	public static boolean isProc1() {
@@ -62,11 +61,9 @@ public class Prime {
 		Prime.proc2 = proc2;
 	}
 
-
 	public int getPrimes(int index) {
 		return foundPrimesInRAM.get(index).intValue();
 	}
-
 
 	public boolean isTraceTime() {
 		return traceTime;
@@ -106,6 +103,27 @@ public class Prime {
 		makeFileReady();
 	}
 
+	private void calcSearchWindow() {
+		//customFormat("NextPrime : ###,###,###,###,###", nextPrime);
+
+		factorSearchWindow = 10500L;
+
+		/*
+		if (nextPrime > 1_000_000L)
+			factorSearchWindow = 1_000L;
+
+		if (nextPrime > 5_000_000L)
+			factorSearchWindow = 50_000L;
+
+		if (nextPrime > 100_000_000L)
+			factorSearchWindow = 100_000L;
+
+		if (nextPrime > 1_000_000_000L)
+			factorSearchWindow = 200_000L; */
+
+		//customFormat("factorSearchWindow : ###,###,###,###,###", factorSearchWindow);
+	}
+
 	public void doPrimes(boolean timetrace, boolean displaytrace) throws InterruptedException, IOException {
 
 		System.out.println("cpu : " + Runtime.getRuntime().availableProcessors());
@@ -116,42 +134,68 @@ public class Prime {
 		setTraceDisplay(displaytrace);
 		readPrimeFile();
 		boolean isPrimeBoolean = false;
+		boolean foundMaxPrime = false;
 
-		for (long i = nextPrime; i <= getFindMaxPrime(); i++) {
-			if (i % 2 == 0)
-				isPrimeBoolean = false;
-			else {
-				// StopWatch timeThread = new StopWatch();
-				// if (i < 1_000_000_000L)
-				// timeThread.start();
-				isPrimeBoolean = isPrime(i);
-				// timeThread.end();
-				// System.out.println("time for non-Thread : " +
-				// timeThread.getDiffStr());
-				// else
-				// timeThread.start();
-				// isPrimeBoolean = isPrimeThread(i);
-				// timeThread.end();
-				// System.out.println("time for Thread : " +
-				// timeThread.getDiffStr());
-				// Thread.sleep(3000);
-			}
-			logThis(i, isPrimeBoolean);
-			if (file_loaded) {
-				doCommit();
-			}
+		calcSearchWindow();
+		long nextSearchWindowMax = nextPrime + factorSearchWindow;
+		//findNotPrimes fnp = new findNotPrimes(nextPrime, nextSearchWindowMax, foundPrimesInRAM, 5);
+		while (!foundMaxPrime) {
+			//fnp.initfindNotPrimes(nextPrime, nextSearchWindowMax, foundPrimesInRAM, 5);
+			int nextsearchWindowCounter = 0;
+			
+			//fnp.doFindNotPrimes();
+			//fnp.ShowSizes();
+			long i = nextPrime;
+			for (; i <= nextSearchWindowMax; i++) {
+				nextsearchWindowCounter++;
+				nextPrime = i;
 
-			if (i % traceProcessListPrimesSamples == 0) {
-				customFormat("Prime : ###,###,###,###,###", i);
-				customFormat("RAM   : ###,###,###,###,### MB", freeRAM / 1000 / 1000);
-				System.out.println("Using RAM : " + !do_not_use_ram);
-				System.out.println("Time : " + PrintTimeStamp(LocalDateTime.now()));
-				sw.end();
-				System.out.println("Diff-time : " + sw.getDiffStr());
-				sw.start();
-				System.out.println();
-				traceProcessListPrimesSamplesCount = 1;
+				// if (i % 2 == 0 || fnp.hasThisIntegerAFactor(0, i) != 0)
+				if (i % 2 == 0)
+					isPrimeBoolean = false;
+				else {
+					//if (fnp.hasThisIntegerAFactor(0, i) > 0)
+						//isPrimeBoolean = false;
+					//else
+						isPrimeBoolean = isPrime(i);
+
+				}
+				registerThisPrime(i, isPrimeBoolean);
+				if (file_loaded) {
+					doCommit();
+				}
+
+				tracePrime(freeRAM, i);
+				if (i >= getFindMaxPrime())
+					foundMaxPrime = true;
+
+				if (nextsearchWindowCounter >= nextSearchWindowMax) {
+					break;
+				}
+
 			}
+			calcSearchWindow();
+			nextSearchWindowMax = nextPrime + factorSearchWindow;
+			//System.out.println("Next searchwindows starts...");
+
+		}
+
+	}
+
+	private void tracePrime(long freeRAM, long i) {
+		// if (i % traceProcessListPrimesSamples == 0) {
+		sw.end();
+		if (sw.getSecs() > 29) {
+			customFormat("Prime : ###,###,###,###,###", i);
+			customFormat("RAM   : ###,###,###,###,### MB", freeRAM / 1000 / 1000);
+			System.out.println("Using RAM : " + !do_not_use_ram);
+			System.out.println("Time : " + PrintTimeStamp(LocalDateTime.now()));
+			System.out.println("Diff-time : " + sw.getDiffStr());
+			customFormat("Primes found since last : ###,###,###,###,###", traceProcessListPrimesSamplesCount);
+			customFormat("Primes/MSec : ###,###,###,###,###", (traceProcessListPrimesSamplesCount / sw.getSecs()));
+			sw.start();
+			traceProcessListPrimesSamplesCount = 1;
+			System.out.println();
 
 		}
 	}
@@ -204,13 +248,22 @@ public class Prime {
 
 				addNewPrimeToRAM(nextPrime);
 
-				if (i % 1000000 == 0) {
-					System.out.println("Do not use RAM : " + do_not_use_ram);
-					customFormat("NextPrime in readPrime : ###,###,###,###,###", nextPrime);
-					customFormat("Size of array with found primes : ###,###,###,###,###", foundPrimesInRAM.size());
+				//if (i % 50_000_000 == 0) {
+				//	System.out.println("Do not use RAM : " + do_not_use_ram);
+					//customFormat("NextPrime in readPrime : ###,###,###,###,###", nextPrime);
+					//customFormat("Size of array with found primes : ###,###,###,###,###", foundPrimesInRAM.size());
 
-				}
+				//}
 
+			}
+
+			if (nextPrime == 2L) {
+				// we are just starting from zero
+				registerThisPrime(nextPrime, true);
+			}
+			if (nextPrime >= getFindMaxPrime()) {
+				System.out.println("Primes to " + getFindMaxPrime() + " found. ");
+				// System.exit(0);
 			}
 
 		} catch (Exception e) {
@@ -373,7 +426,6 @@ public class Prime {
 				thisHasFactors = true;
 			}
 		}
-
 		thisIsPrime = !thisHasFactors;
 
 		return thisIsPrime;
@@ -465,13 +517,12 @@ public class Prime {
 
 	}
 
-	private void logThis(long solveForThisPrime, boolean thisIsPrime) throws IOException {
+	private void registerThisPrime(long solveForThisPrime, boolean thisIsPrime) throws IOException {
 		String str = "";
 		if (thisIsPrime) {
 			traceProcessListPrimesSamplesCount++;
 			str = solveForThisPrime + ";" + System.lineSeparator();
-			if ((traceProcessListPrimesSamplesCount % 50000 == 0)) {
-				traceProcessListPrimesSamplesCount = 0;
+			if ((traceProcessListPrimesSamplesCount % 500_000 == 0)) {
 				customFormat("Prime found         : ###,###,###,###,###", solveForThisPrime);
 				customFormat("Find primes to this : ###,###,###,###,###", findMaxPrime);
 				double work = (double) ((solveForThisPrime * ((double) traceProgressDivisor)) / getFindMaxPrime());
