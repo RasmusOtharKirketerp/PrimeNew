@@ -4,12 +4,14 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.io.IOException;
+
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 @SuppressWarnings("serial")
 public class DrawPrimes extends JPanel {
-	static Prime myPrime = new Prime(30);
+	static Prime myPrime = new Prime(30L);
 
 	@Override
 	public void paint(Graphics g) {

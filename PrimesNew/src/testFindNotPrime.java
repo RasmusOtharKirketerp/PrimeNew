@@ -40,9 +40,9 @@ public class testFindNotPrime {
 		System.out.println(sw.getDiffStr());
 
 		for (Long findPrimes = 0L; findPrimes < testPrimes; findPrimes++) {
-			System.out.println("Finding primes for FindPrimes = " + findPrimes);
+			//System.out.println("Finding primes for FindPrimes = " + findPrimes);
 			if (findPrimes % 2 != 0)
-				System.out.println(fnp.hasThisIntegerAFactor(0, findPrimes));
+				System.out.println(fnp.hasThisIntegerAFactor(1, findPrimes));
 		}
 
 		System.out.println("" + fnp.hasThisIntegerAFactor(0, 3L));

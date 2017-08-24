@@ -32,11 +32,11 @@ public class WorkerThread implements Runnable {
 		// System.out.println(Thread.currentThread().getName() + " to : " +
 		// this.to);
 
-		processCommand();
+		processCommandFindPrimes();
 		//System.out.println(Thread.currentThread().getName() + " End.");
 	}
 
-	private void processCommand() {
+	private void processCommandFindPrimes() {
 		long cd = 0;
 		for (long i = this.from; i <= this.to; i = i + 10) {
 			cd = (int) Math.sqrt(i);
@@ -48,6 +48,7 @@ public class WorkerThread implements Runnable {
 					// System.out.println("Factor found(" + this.div + ").
 					// Integer:" + i + ". Factor : " + foundPrimes.get(j));
 					this.foundNotPrimes.add(i);
+					factorsFoundCount++;
 					break;
 					// i = this.to + 1;
 				}
@@ -58,7 +59,7 @@ public class WorkerThread implements Runnable {
 			}
 
 		}
-		//System.out.println("Factors found in thread(" + this.div + ") : " + factorsFoundCount);
+		System.out.println("Factors found in thread(" + this.div + ") : " + factorsFoundCount);
 	}
 
 }

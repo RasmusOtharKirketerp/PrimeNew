@@ -10,7 +10,26 @@ public class StopWatch {
 	long secs = 0;
 	long minutes = 0;
 	long hours = 0;
+	long nano = 0;
+	long counter = 1;
+	long avgNano = 0;
 	
+	public long getNano() {
+		return nano;
+	}
+	public long getAVGNano() {
+		return (long) avgNano/counter;
+	}
+	
+	public long getCounter(){
+		return counter;
+	}
+	
+	public void addtCounter(){
+		avgNano = nano + avgNano;
+		counter += 1;
+	}
+
 	long waitSecs = 0;
 
 	public StopWatch() {
@@ -20,15 +39,17 @@ public class StopWatch {
 	public StopWatch(LocalDateTime start) {
 		super();
 		this.start = start;
+		nano = System.nanoTime();
 	}
 
 	public void start() {
 		this.start = LocalDateTime.now();
+		nano = System.nanoTime();
 	}
 	
 	public String getDiffStr()
 	{
-		return hours + " timer " + minutes%60 +" minutter " + secs%60 +" sekunder " +milisecs%1000 + " tusindedele.";
+		return hours + "," + minutes%60 +"," + secs%60 +"," +milisecs%1000 + "," + nano +".";
 	}
 
 	public long getMilisecs() {
@@ -71,6 +92,7 @@ public class StopWatch {
 		secs = ChronoUnit.SECONDS.between(start, end);
 		minutes = ChronoUnit.MINUTES.between(start, end);
 		hours = ChronoUnit.HOURS.between(start, end);
+		nano =  System.nanoTime() - nano;
 	}
 
 }

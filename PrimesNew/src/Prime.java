@@ -1,4 +1,5 @@
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -104,24 +105,29 @@ public class Prime {
 	}
 
 	private void calcSearchWindow() {
-		//customFormat("NextPrime : ###,###,###,###,###", nextPrime);
+		// customFormat("NextPrime : ###,###,###,###,###", nextPrime);
 
-		factorSearchWindow = 10500L;
+		factorSearchWindow = 1_000_000L;
 
 		/*
-		if (nextPrime > 1_000_000L)
-			factorSearchWindow = 1_000L;
+		 * if (nextPrime > 1_000_000L) factorSearchWindow = 1_000L;
+		 * 
+		 * if (nextPrime > 5_000_000L) factorSearchWindow = 50_000L;
+		 * 
+		 * if (nextPrime > 100_000_000L) factorSearchWindow = 100_000L;
+		 * 
+		 * if (nextPrime > 1_000_000_000L) factorSearchWindow = 200_000L;
+		 */
 
-		if (nextPrime > 5_000_000L)
-			factorSearchWindow = 50_000L;
+		// customFormat("factorSearchWindow : ###,###,###,###,###",
+		// factorSearchWindow);
+	}
 
-		if (nextPrime > 100_000_000L)
-			factorSearchWindow = 100_000L;
-
-		if (nextPrime > 1_000_000_000L)
-			factorSearchWindow = 200_000L; */
-
-		//customFormat("factorSearchWindow : ###,###,###,###,###", factorSearchWindow);
+	public boolean sampleIsPrime(long i) {
+		// if (i % 10_000 == 0)
+		return true;
+		// else
+		// return false;
 	}
 
 	public void doPrimes(boolean timetrace, boolean displaytrace) throws InterruptedException, IOException {
@@ -138,28 +144,40 @@ public class Prime {
 
 		calcSearchWindow();
 		long nextSearchWindowMax = nextPrime + factorSearchWindow;
-		//findNotPrimes fnp = new findNotPrimes(nextPrime, nextSearchWindowMax, foundPrimesInRAM, 5);
-		while (!foundMaxPrime) {
-			//fnp.initfindNotPrimes(nextPrime, nextSearchWindowMax, foundPrimesInRAM, 5);
+		findNotPrimes fnp = new findNotPrimes(nextPrime, nextSearchWindowMax, foundPrimesInRAM, 5);
+		StopWatch isPrimeTimer = new StopWatch();
+		while (!foundMaxPrime && nextPrime < getFindMaxPrime()) {
+			fnp.initfindNotPrimes(nextPrime, nextSearchWindowMax, foundPrimesInRAM, 5);
 			int nextsearchWindowCounter = 0;
-			
-			//fnp.doFindNotPrimes();
-			//fnp.ShowSizes();
+
+			fnp.doFindNotPrimes();
+			// fnp.ShowSizes();
 			long i = nextPrime;
 			for (; i <= nextSearchWindowMax; i++) {
 				nextsearchWindowCounter++;
 				nextPrime = i;
 
 				// if (i % 2 == 0 || fnp.hasThisIntegerAFactor(0, i) != 0)
+
+				if (sampleIsPrime(i))
+					isPrimeTimer.start();
+
 				if (i % 2 == 0)
 					isPrimeBoolean = false;
 				else {
-					//if (fnp.hasThisIntegerAFactor(0, i) > 0)
-						//isPrimeBoolean = false;
-					//else
+					if (fnp.hasThisIntegerAFactor(1, i) > 0)
+						isPrimeBoolean = false;
+					else
 						isPrimeBoolean = isPrime(i);
 
 				}
+				if (sampleIsPrime(i))
+					isPrimeTimer.end();
+				if (sampleIsPrime(i))
+					isPrimeTimer.addtCounter();
+				if (sampleIsPrime(i))
+					System.out.println("AVG isPrime : " + isPrimeTimer.getAVGNano());
+
 				registerThisPrime(i, isPrimeBoolean);
 				if (file_loaded) {
 					doCommit();
@@ -176,7 +194,7 @@ public class Prime {
 			}
 			calcSearchWindow();
 			nextSearchWindowMax = nextPrime + factorSearchWindow;
-			//System.out.println("Next searchwindows starts...");
+			// System.out.println("Next searchwindows starts...");
 
 		}
 
@@ -233,27 +251,26 @@ public class Prime {
 		String lineRead = "";
 		String[] parts;
 		String primeInString;
-		long i = 0;
-
 		System.out.println("ReadPrimeFile...");
 
 		try {
 			FileReader fstream = new FileReader(PRIMES_FILE);
 			in = new BufferedReader(fstream);
 			while ((lineRead = in.readLine()) != null) {
-				i++;
 				parts = lineRead.split(";");
 				primeInString = parts[0]; // 004
 				nextPrime = Long.valueOf(primeInString).longValue();
 
 				addNewPrimeToRAM(nextPrime);
 
-				//if (i % 50_000_000 == 0) {
-				//	System.out.println("Do not use RAM : " + do_not_use_ram);
-					//customFormat("NextPrime in readPrime : ###,###,###,###,###", nextPrime);
-					//customFormat("Size of array with found primes : ###,###,###,###,###", foundPrimesInRAM.size());
+				// if (i % 50_000_000 == 0) {
+				// System.out.println("Do not use RAM : " + do_not_use_ram);
+				// customFormat("NextPrime in readPrime : ###,###,###,###,###",
+				// nextPrime);
+				// customFormat("Size of array with found primes :
+				// ###,###,###,###,###", foundPrimesInRAM.size());
 
-				//}
+				// }
 
 			}
 
@@ -323,10 +340,12 @@ public class Prime {
 	private boolean isPrimeFoundInRAM(long search) {
 		boolean retval = false;
 		if (search < MaxPrimeInRAM) {
-			for (int i = 0; i < MaxPrimeInRAM; i++) {
-				if (foundPrimesInRAM.get(i) == search)
+			for (int i = 0; i < foundPrimesInRAM.size() && retval == false; i++) {
+				if (foundPrimesInRAM.get(i) == search) {
 					System.out.println("Found in RAM");
-				retval = true;
+					retval = true;
+					break;
+				}
 			}
 		}
 
@@ -543,16 +562,27 @@ public class Prime {
 	public void draw(Graphics2D g2d) {
 		if (!file_loaded)
 			readPrimeFile();
-		for (int i = 0; i < 400; i++) {
-			System.out.println("Drawing...." + i);
-			int p = foundPrimesInRAM.get(i).intValue();
-			int y = 400 - (p / 2);
-			int x = p;
-			int w = p;
-			int h = p;
-			// g2d.drawOval(x, y, w, h);
-			g2d.drawArc(x, y, w, h, 0, 360);
 
+		int zoom = 50;
+		int counter = 0;
+		for (int i = 1; i < 200; i++) {
+			System.out.println("Drawing...." + i);
+			int x = i * zoom;
+			while (x < 2000) {
+				counter++;
+				if (isPrimeFoundInRAM(counter) && i == 1) {
+					g2d.setColor(Color.MAGENTA);
+					g2d.fillArc(x, 500 - ((i * zoom / 2)), i * zoom, i * zoom, 0, 360);
+				}
+				// if (isPrimeFoundInRAM(i))
+				// g2d.setColor(Color.cyan);
+				// else
+				g2d.setColor(Color.blue);
+				g2d.drawArc(x, 500 - ((i * zoom / 2)), i * zoom, i * zoom, 0, 360);
+				x = x + i * zoom;
+			}
+			g2d.setColor(Color.white);
+			g2d.drawString(i + "", i * zoom + 5, 500 + 5);
 		}
 
 	}
