@@ -1,8 +1,11 @@
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -10,6 +13,8 @@ import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+
+import javax.imageio.ImageIO;
 
 /**
  * @author Rasmus Othar
@@ -342,7 +347,7 @@ public class Prime {
 		if (search < MaxPrimeInRAM) {
 			for (int i = 0; i < foundPrimesInRAM.size() && retval == false; i++) {
 				if (foundPrimesInRAM.get(i) == search) {
-					System.out.println("Found in RAM");
+					//System.out.println("Found in RAM");
 					retval = true;
 					break;
 				}
@@ -559,30 +564,76 @@ public class Prime {
 
 	}
 
-	public void draw(Graphics2D g2d) {
+	public void draw(Graphics2D g2d, int maxX, int lineAtX) {
 		if (!file_loaded)
 			readPrimeFile();
 
-		int zoom = 50;
+		int zoom = 30;
 		int counter = 0;
-		for (int i = 1; i < 200; i++) {
-			System.out.println("Drawing...." + i);
+		System.out.println("Start drawing!");
+		g2d.setFont(new Font("Georgia", Font.PLAIN, 14));
+		for (int i = 1; i < 1600; i++) {
+			// System.out.println("Drawing...." + i);
 			int x = i * zoom;
-			while (x < 2000) {
+			while (x < 1600*zoom) {
 				counter++;
-				if (isPrimeFoundInRAM(counter) && i == 1) {
-					g2d.setColor(Color.MAGENTA);
-					g2d.fillArc(x, 500 - ((i * zoom / 2)), i * zoom, i * zoom, 0, 360);
-				}
+				// if (isPrimeFoundInRAM(counter) && i == 1) {
+				// g2d.setColor(Color.MAGENTA);
+				// g2d.fillArc(x, 500 - ((i * zoom / 2)), i * zoom, i * zoom, 0,
+				// 360);
+				// }
 				// if (isPrimeFoundInRAM(i))
 				// g2d.setColor(Color.cyan);
 				// else
-				g2d.setColor(Color.blue);
-				g2d.drawArc(x, 500 - ((i * zoom / 2)), i * zoom, i * zoom, 0, 360);
+				g2d.setColor(Color.cyan);
+				g2d.drawArc(x, lineAtX - ((i * zoom / 2)), i * zoom, i * zoom, 0, 360);
 				x = x + i * zoom;
 			}
+
 			g2d.setColor(Color.white);
-			g2d.drawString(i + "", i * zoom + 5, 500 + 5);
+		}
+		for (int i = 1; i < 1600; i++) {
+		if (isPrimeFoundInRAM(i))
+		{
+			g2d.drawString(i + "", i * zoom + 1, lineAtX + 5);
+			//g2d.setColor(Color.cyan);
+			//g2d.drawArc(1, lineAtX - ((i * zoom / 2)), i * zoom, i * zoom, 337, 45);
+			
+		}
+		}
+		System.out.println("Done drawing!");
+
+	}
+
+	public void save(BufferedImage bi) {
+		try {
+			ImageIO.write(bi, "BMP", new File("prime_out.bmp"));
+			ImageIO.write(bi, "JPG", new File("prime_out.jpg"));
+			System.exit(0);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	public void draw2(Graphics2D g2d) {
+		if (!file_loaded)
+			readPrimeFile();
+
+		int zoom = 2;
+		for (int i = 1; 2100 < (((i * zoom / 2) + i * zoom)); i++) {
+			int x = i * zoom;
+			System.out.println("Drawing...." + i);
+			if (isPrimeFoundInRAM(i)) {
+				g2d.setColor(Color.MAGENTA);
+				g2d.drawArc(900 - (x / 2), 500 - (x / 2), x, x, 0, 360);
+				try {
+					Thread.sleep(1);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
 		}
 
 	}
